@@ -38,10 +38,10 @@ function App() {
     <>
       <div className="movies">
         {movies.map((movie) => (
-          <div className="movie" key={movie.OriginalTitle}>
+          <div className="movie" key={movie.Name}>
             {movie.ExternalUrls && movie.ExternalUrls[1] && (
             <a href={movie.ExternalUrls[1]["Url"]} target="_blank" rel="noopener noreferrer">
-              <h2>{movie.OriginalTitle}</h2>
+              <h2>{movie.Name}</h2>
             </a>
           )}
           </div>
