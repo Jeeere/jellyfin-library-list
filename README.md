@@ -1,5 +1,5 @@
 # jellyfin-library-list
-Frontend + backend for hosting a site listing a Jellyfin library. This allows you to share a list of media in your library without giving access to your Jellyfin server.
+Frontend + backend for hosting a site that allows you to share a list of your available media with others without exposing your Jellyfin server.
 
 ## How to
 ### Prepare `.env`
