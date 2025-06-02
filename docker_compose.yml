@@ -1,0 +1,19 @@
+version: '3'
+services:
+  frontend:
+    image: nginx:alpine
+    volumes:
+      - ./frontend/dist:/usr/share/nginx/html
+    ports:
+      - "8080:80"
+
+  backend:
+    image: node:alpine
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    command: >
+      sh -c "npm install &&
+             node server.js"
+    ports:
+      - "3000:3000"
