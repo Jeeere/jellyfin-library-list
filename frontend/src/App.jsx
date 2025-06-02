@@ -10,16 +10,19 @@ function App() {
     // Fetch movies from backend
     const fetchMovies = async () => {
       try {
-        const response = await axios.get('http://localhost:3000/getMovies');
+        const response = await axios.get('/api/getMovies');
         console.log(response.data); // REMOVE
         setMovies(response.data);
+
+        if (response.status === 200) {
+          setLoading(false);
+        }
       } catch (error) {
         console.error('Error fetching movies:', error);
       }
     };
 
     fetchMovies()
-    setLoading(false);
   }, []);
 
   if (loading) {
