@@ -11,7 +11,6 @@ function App() {
     const fetchMovies = async () => {
       try {
         const response = await axios.get('/api/getMovies');
-        console.log(response.data); // REMOVE
         setMovies(response.data);
 
         if (response.status === 200) {

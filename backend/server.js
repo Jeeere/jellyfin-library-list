@@ -19,7 +19,7 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // Endpoint: GET /getMovies
-app.get('/getMovies', async (req, res) => {
+app.get('/api/getMovies', async (req, res) => {
     // Perform a request to the jellyfin API to get movies
     try {
         const url = process.env.JELLYFIN_URL + `/Items?parentId=${process.env.JELLYFIN_LIBRARY_ID}&fields=OriginalTitle,ExternalUrls&enableTotalRecordCount=true&enableImages=true`;
