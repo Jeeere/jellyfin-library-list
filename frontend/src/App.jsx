@@ -10,12 +10,16 @@ function App() {
     // Fetch movies from backend
     const fetchMovies = async () => {
       try {
-        const response = await axios.get('/api/getMovies');
-        setMovies(response.data);
+        const response = await axios.get('http://localhost:3000/api/getMovies');
 
-        if (response.status === 200) {
-          setLoading(false);
+        // Check for invalid content type
+        const contentType = response.headers['content-type'];
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Backend server not available');
         }
+
+        setMovies(response.data);
+        setLoading(false);
       } catch (error) {
         console.error('Error fetching movies:', error);
       }
