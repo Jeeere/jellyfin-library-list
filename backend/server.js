@@ -22,7 +22,7 @@ if (process.env.NODE_ENV === 'development') {
 app.get('/api/getMovies', async (req, res) => {
     // Perform a request to the jellyfin API to get movies
     try {
-        const url = process.env.JELLYFIN_URL + `/Items?parentId=${process.env.JELLYFIN_LIBRARY_ID}&fields=OriginalTitle,ExternalUrls&enableTotalRecordCount=true&enableImages=true`;
+        const url = process.env.JELLYFIN_URL + `/Items?parentId=${process.env.JELLYFIN_LIBRARY_ID}&fields=OriginalTitle,ExternalUrls,Genres,AirTime&enableTotalRecordCount=true&enableImages=true`;
         const response = await axios.get(url, {
             headers: {
                 'X-Emby-Token': process.env.JELLYFIN_API_KEY,
@@ -31,16 +31,45 @@ app.get('/api/getMovies', async (req, res) => {
         });
         
         // Strip everything but Name, OriginalTitle, and ExternalUrls
-        response.data.Items = response.data.Items.map(item => ({
-            Name: item.Name,
-            OriginalTitle: item.OriginalTitle,
-            ExternalUrls: item.ExternalUrls
+        response.data.Items = response.data.Items
+            .filter(item => !item.IsFolder)
+            .map(item => ({
+                Name: item.Name,
+                OriginalTitle: item.OriginalTitle,
+                Id: item.Id,
+                Genres: item.Genres,
+                AirTime: Math.round(item.RunTimeTicks / 600000000),
+                ExternalUrls: item.ExternalUrls
         }));
 
         res.json(response.data.Items);
     } catch (error) {
         console.error('Error:', error);
         res.status(500).json({ error: 'Failed to fetch movies' });
+    }
+});
+
+// Endpoint: GET /getMovieImage
+app.get('/api/getMovieImage/:id', async (req, res) => {
+    const movieId = req.params.id;
+
+    try {
+        // Fetch the movie image from Jellyfin
+        const imageUrl = `${process.env.JELLYFIN_URL}/Items/${movieId}/Images/Primary`;
+        const response = await axios.get(imageUrl, {
+            headers: {
+                'X-Emby-Token': process.env.JELLYFIN_API_KEY,
+            },
+            responseType: 'arraybuffer'
+        });
+        
+        // Set the content type from the original response
+        res.set('Content-Type', response.headers['content-type'] || 'image/jpeg');
+        res.set('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+        res.send(response.data);
+    } catch (error) {
+        console.error('Error fetching movie image:', error);
+        res.status(404).send('Image not found');
     }
 });
 
