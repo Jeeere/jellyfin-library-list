@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 import axios from 'axios';
 import cors from 'cors';
+import sharp from 'sharp';
 
 dotenv.config();
 const app = express();
@@ -64,11 +65,14 @@ app.get('/api/getMovieImage/:id', async (req, res) => {
             },
             responseType: 'arraybuffer'
         });
-        
-        // Set the content type from the original response
-        res.set('Content-Type', response.headers['content-type'] || 'image/jpeg');
+
+        const compressedImage = await sharp(response.data)
+            .jpeg({ quality: 1 })
+            .toBuffer();
+
+        res.set('Content-Type', 'image/jpeg');
         res.set('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
-        res.send(response.data);
+        res.send(compressedImage);
     } catch (error) {
         console.error('Error fetching movie image:', error);
         res.status(404).send('Image not found');
