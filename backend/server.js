@@ -67,11 +67,11 @@ app.get('/api/getMovieImage/:id', async (req, res) => {
         });
 
         const compressedImage = await sharp(response.data)
-            .jpeg({ quality: 1 })
+            .jpeg({ quality: 20 })
             .toBuffer();
 
         res.set('Content-Type', 'image/jpeg');
-        res.set('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+        // res.set('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
         res.send(compressedImage);
     } catch (error) {
         console.error('Error fetching movie image:', error);
