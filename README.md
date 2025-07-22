@@ -10,8 +10,9 @@ FRONTEND_URL={url to the site to be hosted}
 JELLYFIN_URL={jellyfin url}
 JELLYFIN_API_KEY={jellyfin api key}
 JELLYFIN_LIBRARY_ID={wanted library id}
+JELLYFIN_USER_ID={wanted user id}
 ```
-`JELLYFIN_LIBRARY_ID` can be gotten from `{JELLYFIN_URL}/Items` using the header `X-Emby-Token={JELLYFIN_API_KEY}`.
+`JELLYFIN_LIBRARY_ID` can be gotten from `{JELLYFIN_URL}/Items` using the header `X-Emby-Token={JELLYFIN_API_KEY}`. `JELLYFIN_USER_ID` is fetched similarly from `{JELLYFIN_URL}/Users`.
 
 ### Run
 - In the `/frontend` directory, run `npm install` and `npm run build`

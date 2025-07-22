@@ -22,7 +22,7 @@ if (process.env.NODE_ENV === 'development') {
 app.get('/api/getMovies', async (req, res) => {
     // Perform a request to the jellyfin API to get movies
     try {
-        const url = process.env.JELLYFIN_URL + `/Items?parentId=${process.env.JELLYFIN_LIBRARY_ID}&fields=OriginalTitle,ExternalUrls,Genres,AirTime&enableTotalRecordCount=true&enableImages=true`;
+        const url = process.env.JELLYFIN_URL + `/Users/${process.env.JELLYFIN_USER_ID}/Items?parentId=${process.env.JELLYFIN_LIBRARY_ID}&fields=OriginalTitle,ExternalUrls,Genres,AirTime&enableTotalRecordCount=true&enableImages=true`;
         const response = await axios.get(url, {
             headers: {
                 'X-Emby-Token': process.env.JELLYFIN_API_KEY,
@@ -39,7 +39,9 @@ app.get('/api/getMovies', async (req, res) => {
                 Id: item.Id,
                 Genres: item.Genres,
                 AirTime: Math.round(item.RunTimeTicks / 600000000),
-                ExternalUrls: item.ExternalUrls
+                ExternalUrls: item.ExternalUrls,
+                Played: item.UserData.Played || false,
+                PremiereDate: item.PremiereDate || null,
         }));
 
         res.json(response.data.Items);
