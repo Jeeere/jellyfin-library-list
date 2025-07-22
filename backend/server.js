@@ -67,7 +67,7 @@ app.get('/api/getMovieImage/:id', async (req, res) => {
         });
 
         const compressedImage = await sharp(response.data)
-            .jpeg({ quality: 20 })
+            .jpeg({ quality: 6 })
             .toBuffer();
 
         res.set('Content-Type', 'image/jpeg');
