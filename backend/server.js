@@ -6,6 +6,7 @@ import cors from 'cors';
 import sharp from 'sharp';
 import fs from 'fs';
 import path from 'path';
+import cron from 'node-cron';
 
 dotenv.config();
 const app = express();
@@ -107,6 +108,117 @@ app.get('/api/getMovieImage/:id', async (req, res) => {
         console.error('Error fetching movie image:', error);
         res.status(404).send('Image not found');
     }
+});
+
+app.post('/api/triggerImageCheck', async (req, res) => {
+    try {
+        console.log('Manual image check triggered...');
+        await checkImages();
+        res.status(200).json({ success: true, message: 'Image check completed' });
+    } catch (error) {
+        console.error('Error during image check:', error);
+        res.status(500).json({ error: 'Failed to check image updates', details: error.message });
+    }
+});
+
+// Function to check and recompress updated images
+async function checkImages() {
+    console.log('Starting nightly image check...');
+
+    try {
+        // Get all movies from Jellyfin
+        const url = process.env.JELLYFIN_URL + `/Users/${process.env.JELLYFIN_USER_ID}/Items?parentId=${process.env.JELLYFIN_LIBRARY_ID}`;
+        const response = await axios.get(url, {
+            headers: {
+                'X-Emby-Token': process.env.JELLYFIN_API_KEY,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const movies = response.data.Items.filter(item => !item.IsFolder);
+        console.log(`Checking ${movies.length} movies for image updates...`);
+
+        // Create a set of valid movie IDs
+        const validMovieIds = new Set(movies.map(movie => movie.Id));
+
+        let updatedCount = 0;
+        let deletedOrphanCount = 0;
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 55 * 1000);
+
+        // Check for updated images
+        for (const movie of movies) {
+            try {
+                const imageUrl = `${process.env.JELLYFIN_URL}/Items/${movie.Id}/Images/Primary`;
+                
+                // Get image headers to check last modified date
+                const headResponse = await axios.head(imageUrl, {
+                    headers: { 'X-Emby-Token': process.env.JELLYFIN_API_KEY }
+                });
+
+                const lastModified = headResponse.headers['last-modified'];
+                
+                if (lastModified) {
+                    const lastModifiedDate = new Date(lastModified);
+                    
+                    // Check if image was modified in the past 24 hours
+                    if (lastModifiedDate > twentyFourHoursAgo) {
+                        // Delete old cached image if it exists
+                        const cacheFilePath = path.join(CACHE_DIR, `${movie.Id}.jpg`);
+                        if (fs.existsSync(cacheFilePath)) {
+                            fs.unlinkSync(cacheFilePath);
+                        }
+
+                        // Fetch and compress the updated image
+                        const imageResponse = await axios.get(imageUrl, {
+                            headers: { 'X-Emby-Token': process.env.JELLYFIN_API_KEY },
+                            responseType: 'arraybuffer'
+                        });
+
+                        const compressedImage = await sharp(imageResponse.data)
+                            .jpeg({ quality: 6 })
+                            .toBuffer();
+
+                        // Save new compressed image
+                        fs.writeFileSync(cacheFilePath, compressedImage);
+                        updatedCount++;
+                    }
+                }
+            } catch (error) {
+                console.error(`Error checking image for movie ${movie.Name}:`, error.message);
+            }
+        }
+
+        // Clean up orphaned cached images
+        console.log('Checking for orphaned cached images...');
+        try {
+            const cachedFiles = fs.readdirSync(CACHE_DIR);
+            const imageFiles = cachedFiles.filter(file => file.endsWith('.jpg'));
+            
+            for (const file of imageFiles) {
+                const movieId = file.replace('.jpg', '');
+                
+                // If this movie ID doesn't exist in Jellyfin anymore, delete the cached image
+                if (!validMovieIds.has(movieId)) {
+                    const orphanedFilePath = path.join(CACHE_DIR, file);
+                    fs.unlinkSync(orphanedFilePath);
+                    deletedOrphanCount++;
+                }
+            }
+        } catch (error) {
+            console.error('Error cleaning up orphaned images:', error.message);
+        }
+
+        console.log(`Nightly image check completed. Updated ${updatedCount} images, deleted ${deletedOrphanCount} orphaned cached images.`);
+    } catch (error) {
+        console.error('Error during nightly image check:', error);
+    }
+}
+
+// Schedule nightly image update check at 2 AM
+cron.schedule('0 2 * * *', () => {
+    checkImages();
+}, {
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
 });
 
 app.listen(PORT, () => {
