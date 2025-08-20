@@ -4,10 +4,20 @@ import express from 'express';
 import axios from 'axios';
 import cors from 'cors';
 import sharp from 'sharp';
+import fs from 'fs';
+import path from 'path';
 
 dotenv.config();
 const app = express();
 const PORT = 3000;
+
+// Cache directory for compressed images
+const CACHE_DIR = path.join(process.cwd(), 'cache', 'images');
+
+// Ensure cache directory exists
+if (!fs.existsSync(CACHE_DIR)) {
+    fs.mkdirSync(CACHE_DIR, { recursive: true });
+}
 
 // Enable CORS for development only
 if (process.env.NODE_ENV === 'development') {
@@ -55,8 +65,18 @@ app.get('/api/getMovies', async (req, res) => {
 // Endpoint: GET /getMovieImage
 app.get('/api/getMovieImage/:id', async (req, res) => {
     const movieId = req.params.id;
+    const cacheFilePath = path.join(CACHE_DIR, `${movieId}.jpg`);
 
     try {
+        // Check if cached image exists
+        if (fs.existsSync(cacheFilePath)) {
+            // Serve cached image
+            const cachedImage = fs.readFileSync(cacheFilePath);
+            res.set('Content-Type', 'image/jpeg');
+            res.set('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+            return res.send(cachedImage);
+        }
+
         // Fetch the movie image from Jellyfin
         const imageUrl = `${process.env.JELLYFIN_URL}/Items/${movieId}/Images/Primary`;
         const response = await axios.get(imageUrl, {
@@ -66,12 +86,22 @@ app.get('/api/getMovieImage/:id', async (req, res) => {
             responseType: 'arraybuffer'
         });
 
+        // Compress the image
+        console.log(`Compressing image for movie ID: ${movieId}`);
         const compressedImage = await sharp(response.data)
             .jpeg({ quality: 6 })
             .toBuffer();
 
+        // Save compressed image to cache
+        try {
+            fs.writeFileSync(cacheFilePath, compressedImage);
+        } catch (cacheError) {
+            console.warn('Failed to cache image:', cacheError.message);
+            // Continue serving the image even if caching fails
+        }
+
         res.set('Content-Type', 'image/jpeg');
-        // res.set('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+        res.set('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
         res.send(compressedImage);
     } catch (error) {
         console.error('Error fetching movie image:', error);
