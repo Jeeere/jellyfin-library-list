@@ -20,6 +20,24 @@ if (!fs.existsSync(CACHE_DIR)) {
     fs.mkdirSync(CACHE_DIR, { recursive: true });
 }
 
+// Function to clear cache directory
+function clearCache() {
+    try {
+        const files = fs.readdirSync(CACHE_DIR);
+        for (const file of files) {
+            const filePath = path.join(CACHE_DIR, file);
+            fs.unlinkSync(filePath);
+        }
+        console.log(`Cleared ${files.length} cached images`);
+    } catch (error) {
+        console.error('Error clearing cache:', error);
+    }
+}
+
+// Clear cache on server startup
+console.log('Clearing image cache on startup...');
+clearCache();
+
 // Enable CORS for development only
 if (process.env.NODE_ENV === 'development') {
   app.use(cors());
